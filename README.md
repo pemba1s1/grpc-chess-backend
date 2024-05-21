@@ -14,3 +14,19 @@ This is a chess game server made in go using grpc
     export PATH="$PATH:$(go env GOPATH)/bin"
     ```
 - MakeFile. For installation instructions, see [Make for Windows](https://gnuwin32.sourceforge.net/packages/make.htm)
+
+## Local Development
+### Clone Repo
+```bash
+git clone https://github.com/pemba1s1/chess-backend.git
+```
+### Generate the gRPC client and server interfaces from our .proto service definition
+```bash
+make generate_grpc_code
+```
+
+### Build and run docker
+```bash
+make build_docker
+make run_docker
+```
