@@ -14,8 +14,16 @@ type myChessServer struct {
 	chess.UnimplementedChessServer
 }
 
-func (s *myChessServer) NewGame(context.Context, *chess.NewGameRequest) (*chess.NewGameResponse, error) {
-	return &chess.NewGameResponse{}, nil
+func (s *myChessServer) CreateRoom(context.Context, *chess.CreateRoomRequest) (*chess.RoomResponse, error) {
+	return &chess.RoomResponse{}, nil
+}
+
+func (s *myChessServer) JoinRoom(context.Context, *chess.JoinRoomRequest) (*chess.RoomResponse, error) {
+	return &chess.RoomResponse{}, nil
+}
+
+func (s *myChessServer) Moves(stream chess.Chess_MovesServer) error {
+	return nil
 }
 
 func main() {

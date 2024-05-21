@@ -22,7 +22,9 @@ const _ = grpc.SupportPackageIsVersion7
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type ChessClient interface {
-	NewGame(ctx context.Context, in *NewGameRequest, opts ...grpc.CallOption) (*NewGameResponse, error)
+	CreateRoom(ctx context.Context, in *CreateRoomRequest, opts ...grpc.CallOption) (*RoomResponse, error)
+	JoinRoom(ctx context.Context, in *JoinRoomRequest, opts ...grpc.CallOption) (*RoomResponse, error)
+	Moves(ctx context.Context, opts ...grpc.CallOption) (Chess_MovesClient, error)
 }
 
 type chessClient struct {
@@ -33,20 +35,62 @@ func NewChessClient(cc grpc.ClientConnInterface) ChessClient {
 	return &chessClient{cc}
 }
 
-func (c *chessClient) NewGame(ctx context.Context, in *NewGameRequest, opts ...grpc.CallOption) (*NewGameResponse, error) {
-	out := new(NewGameResponse)
-	err := c.cc.Invoke(ctx, "/Chess/NewGame", in, out, opts...)
+func (c *chessClient) CreateRoom(ctx context.Context, in *CreateRoomRequest, opts ...grpc.CallOption) (*RoomResponse, error) {
+	out := new(RoomResponse)
+	err := c.cc.Invoke(ctx, "/Chess/CreateRoom", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
+func (c *chessClient) JoinRoom(ctx context.Context, in *JoinRoomRequest, opts ...grpc.CallOption) (*RoomResponse, error) {
+	out := new(RoomResponse)
+	err := c.cc.Invoke(ctx, "/Chess/JoinRoom", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *chessClient) Moves(ctx context.Context, opts ...grpc.CallOption) (Chess_MovesClient, error) {
+	stream, err := c.cc.NewStream(ctx, &Chess_ServiceDesc.Streams[0], "/Chess/Moves", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &chessMovesClient{stream}
+	return x, nil
+}
+
+type Chess_MovesClient interface {
+	Send(*MoveRequest) error
+	Recv() (*MoveResponse, error)
+	grpc.ClientStream
+}
+
+type chessMovesClient struct {
+	grpc.ClientStream
+}
+
+func (x *chessMovesClient) Send(m *MoveRequest) error {
+	return x.ClientStream.SendMsg(m)
+}
+
+func (x *chessMovesClient) Recv() (*MoveResponse, error) {
+	m := new(MoveResponse)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
 // ChessServer is the server API for Chess service.
 // All implementations must embed UnimplementedChessServer
 // for forward compatibility
 type ChessServer interface {
-	NewGame(context.Context, *NewGameRequest) (*NewGameResponse, error)
+	CreateRoom(context.Context, *CreateRoomRequest) (*RoomResponse, error)
+	JoinRoom(context.Context, *JoinRoomRequest) (*RoomResponse, error)
+	Moves(Chess_MovesServer) error
 	mustEmbedUnimplementedChessServer()
 }
 
@@ -54,8 +98,14 @@ type ChessServer interface {
 type UnimplementedChessServer struct {
 }
 
-func (UnimplementedChessServer) NewGame(context.Context, *NewGameRequest) (*NewGameResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method NewGame not implemented")
+func (UnimplementedChessServer) CreateRoom(context.Context, *CreateRoomRequest) (*RoomResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreateRoom not implemented")
+}
+func (UnimplementedChessServer) JoinRoom(context.Context, *JoinRoomRequest) (*RoomResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method JoinRoom not implemented")
+}
+func (UnimplementedChessServer) Moves(Chess_MovesServer) error {
+	return status.Errorf(codes.Unimplemented, "method Moves not implemented")
 }
 func (UnimplementedChessServer) mustEmbedUnimplementedChessServer() {}
 
@@ -70,22 +120,66 @@ func RegisterChessServer(s grpc.ServiceRegistrar, srv ChessServer) {
 	s.RegisterService(&Chess_ServiceDesc, srv)
 }
 
-func _Chess_NewGame_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(NewGameRequest)
+func _Chess_CreateRoom_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateRoomRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(ChessServer).NewGame(ctx, in)
+		return srv.(ChessServer).CreateRoom(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/Chess/NewGame",
+		FullMethod: "/Chess/CreateRoom",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ChessServer).NewGame(ctx, req.(*NewGameRequest))
+		return srv.(ChessServer).CreateRoom(ctx, req.(*CreateRoomRequest))
 	}
 	return interceptor(ctx, in, info, handler)
+}
+
+func _Chess_JoinRoom_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(JoinRoomRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ChessServer).JoinRoom(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/Chess/JoinRoom",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ChessServer).JoinRoom(ctx, req.(*JoinRoomRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Chess_Moves_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(ChessServer).Moves(&chessMovesServer{stream})
+}
+
+type Chess_MovesServer interface {
+	Send(*MoveResponse) error
+	Recv() (*MoveRequest, error)
+	grpc.ServerStream
+}
+
+type chessMovesServer struct {
+	grpc.ServerStream
+}
+
+func (x *chessMovesServer) Send(m *MoveResponse) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+func (x *chessMovesServer) Recv() (*MoveRequest, error) {
+	m := new(MoveRequest)
+	if err := x.ServerStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
 }
 
 // Chess_ServiceDesc is the grpc.ServiceDesc for Chess service.
@@ -96,10 +190,21 @@ var Chess_ServiceDesc = grpc.ServiceDesc{
 	HandlerType: (*ChessServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "NewGame",
-			Handler:    _Chess_NewGame_Handler,
+			MethodName: "CreateRoom",
+			Handler:    _Chess_CreateRoom_Handler,
+		},
+		{
+			MethodName: "JoinRoom",
+			Handler:    _Chess_JoinRoom_Handler,
 		},
 	},
-	Streams:  []grpc.StreamDesc{},
+	Streams: []grpc.StreamDesc{
+		{
+			StreamName:    "Moves",
+			Handler:       _Chess_Moves_Handler,
+			ServerStreams: true,
+			ClientStreams: true,
+		},
+	},
 	Metadata: "chess/chess.proto",
 }
