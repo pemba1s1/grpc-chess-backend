@@ -1,0 +1,15 @@
+syntax = "proto3";
+option go_package = "github.com/pemba1s1/chess-backend/chess";
+
+message NewGameRequest {
+    string whitePlayer = 1;
+    string blackPlayer = 2;
+}
+
+message NewGameResponse {
+    int32 gameId = 1;
+}
+
+service Chess {
+    rpc NewGame(NewGameRequest) returns (NewGameResponse) {}
+}
