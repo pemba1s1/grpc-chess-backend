@@ -1,4 +1,4 @@
-module github.com/pemba1s1/chess-backend
+module github.com/pemba1s1/grpc-chess-backend
 
 go 1.22.1
 

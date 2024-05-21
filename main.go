@@ -8,7 +8,7 @@ import (
 	"net"
 
 	"github.com/google/uuid"
-	"github.com/pemba1s1/chess-backend/chess"
+	chess "github.com/pemba1s1/grpc-chess-backend/proto"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 )
