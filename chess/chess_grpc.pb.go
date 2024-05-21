@@ -2,7 +2,7 @@
 // versions:
 // - protoc-gen-go-grpc v1.2.0
 // - protoc             v5.26.1
-// source: chess.proto
+// source: chess/chess.proto
 
 package chess
 
@@ -101,5 +101,5 @@ var Chess_ServiceDesc = grpc.ServiceDesc{
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
-	Metadata: "chess.proto",
+	Metadata: "chess/chess.proto",
 }
