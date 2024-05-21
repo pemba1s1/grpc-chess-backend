@@ -24,6 +24,7 @@ const _ = grpc.SupportPackageIsVersion7
 type ChessClient interface {
 	CreateRoom(ctx context.Context, in *CreateRoomRequest, opts ...grpc.CallOption) (*RoomResponse, error)
 	JoinRoom(ctx context.Context, in *JoinRoomRequest, opts ...grpc.CallOption) (*RoomResponse, error)
+	GetRooms(ctx context.Context, in *GetRoomRequest, opts ...grpc.CallOption) (*GetRoomsResponse, error)
 	Moves(ctx context.Context, opts ...grpc.CallOption) (Chess_MovesClient, error)
 }
 
@@ -47,6 +48,15 @@ func (c *chessClient) CreateRoom(ctx context.Context, in *CreateRoomRequest, opt
 func (c *chessClient) JoinRoom(ctx context.Context, in *JoinRoomRequest, opts ...grpc.CallOption) (*RoomResponse, error) {
 	out := new(RoomResponse)
 	err := c.cc.Invoke(ctx, "/Chess/JoinRoom", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *chessClient) GetRooms(ctx context.Context, in *GetRoomRequest, opts ...grpc.CallOption) (*GetRoomsResponse, error) {
+	out := new(GetRoomsResponse)
+	err := c.cc.Invoke(ctx, "/Chess/GetRooms", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -90,6 +100,7 @@ func (x *chessMovesClient) Recv() (*MoveResponse, error) {
 type ChessServer interface {
 	CreateRoom(context.Context, *CreateRoomRequest) (*RoomResponse, error)
 	JoinRoom(context.Context, *JoinRoomRequest) (*RoomResponse, error)
+	GetRooms(context.Context, *GetRoomRequest) (*GetRoomsResponse, error)
 	Moves(Chess_MovesServer) error
 	mustEmbedUnimplementedChessServer()
 }
@@ -103,6 +114,9 @@ func (UnimplementedChessServer) CreateRoom(context.Context, *CreateRoomRequest) 
 }
 func (UnimplementedChessServer) JoinRoom(context.Context, *JoinRoomRequest) (*RoomResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method JoinRoom not implemented")
+}
+func (UnimplementedChessServer) GetRooms(context.Context, *GetRoomRequest) (*GetRoomsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetRooms not implemented")
 }
 func (UnimplementedChessServer) Moves(Chess_MovesServer) error {
 	return status.Errorf(codes.Unimplemented, "method Moves not implemented")
@@ -156,6 +170,24 @@ func _Chess_JoinRoom_Handler(srv interface{}, ctx context.Context, dec func(inte
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Chess_GetRooms_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetRoomRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ChessServer).GetRooms(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/Chess/GetRooms",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ChessServer).GetRooms(ctx, req.(*GetRoomRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Chess_Moves_Handler(srv interface{}, stream grpc.ServerStream) error {
 	return srv.(ChessServer).Moves(&chessMovesServer{stream})
 }
@@ -196,6 +228,10 @@ var Chess_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "JoinRoom",
 			Handler:    _Chess_JoinRoom_Handler,
+		},
+		{
+			MethodName: "GetRooms",
+			Handler:    _Chess_GetRooms_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{
