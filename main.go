@@ -8,7 +8,7 @@ import (
 	"net"
 
 	"github.com/google/uuid"
-	chess "github.com/pemba1s1/grpc-chess-backend/proto"
+	chess "github.com/pemba1s1/grpc-chess-backend/chess"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 )
@@ -27,7 +27,6 @@ type myChessServer struct {
 }
 
 func (s *myChessServer) CreateRoom(ctx context.Context, r *chess.CreateRoomRequest) (*chess.RoomResponse, error) {
-	fmt.Printf("Creating Room, %v", r.Player_1.Color)
 	room := &Room{
 		RoomId: uuid.New().String(),
 		Player_1: chess.Player{
@@ -38,6 +37,7 @@ func (s *myChessServer) CreateRoom(ctx context.Context, r *chess.CreateRoomReque
 	}
 
 	s.rooms[room.RoomId] = room
+	fmt.Printf("Creating Room, %v", s.rooms[room.RoomId])
 	return &chess.RoomResponse{RoomId: room.RoomId, Status: "Room Created"}, nil
 }
 
@@ -51,6 +51,7 @@ func (s *myChessServer) JoinRoom(ctx context.Context, r *chess.JoinRoomRequest) 
 		Color: r.Player_2.Color,
 	}
 	room.Player_2_Stream = nil
+	fmt.Printf("Joining Room, %v", room)
 	return &chess.RoomResponse{RoomId: room.RoomId, Status: "Room Joined"}, nil
 }
 
@@ -62,6 +63,14 @@ func (s *myChessServer) GetRooms(context.Context, *chess.GetRoomRequest) (*chess
 		})
 	}
 	return roomsResponse, nil
+}
+
+func (s *myChessServer) GetRoomInfo(ctx context.Context, r *chess.GetRoomRequest) (*chess.RoomResponse, error) {
+	room, ok := s.rooms[r.RoomId]
+	if !ok {
+		return &chess.RoomResponse{Status: "Room Not Found"}, nil
+	}
+	return &chess.RoomResponse{RoomId: room.RoomId, Player_1: &room.Player_1, Player_2: &room.Player_2, Status: "Room Found"}, nil
 }
 
 func (s *myChessServer) BroadcastMove(room *Room, in *chess.MoveRequest) {
@@ -104,7 +113,7 @@ func (s *myChessServer) Moves(stream chess.Chess_MovesServer) error {
 }
 
 func main() {
-	lis, err := net.Listen("tcp", ":8080")
+	lis, err := net.Listen("tcp", ":8082")
 	if err != nil {
 		log.Fatalf("Failed to listen: %v", err)
 	}

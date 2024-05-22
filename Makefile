@@ -4,7 +4,7 @@ generate_grpc_code:
 	--go_opt=paths=source_relative \
 	--go-grpc_out=. \
 	--go-grpc_opt=paths=source_relative \
-	proto/chess.proto
+	chess/chess.proto
 
 build_docker:
 	docker build -t grpc-go-chess-server .

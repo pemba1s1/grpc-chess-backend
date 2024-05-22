@@ -1,5 +1,5 @@
 syntax = "proto3";
-option go_package = "github.com/pemba1s1/chess-backend/proto";
+option go_package = "github.com/pemba1s1/chess-backend/chess";
 
 enum PieceType {
     NONE = 0;
@@ -28,6 +28,8 @@ message CreateRoomRequest {
 message RoomResponse {
     string roomId = 1;
     string status = 2;
+    Player player_1 = 3;
+    Player player_2 = 4;
 }
 
 message JoinRoomRequest {
@@ -63,6 +65,7 @@ message MoveResponse {
 }
 
 message GetRoomRequest {
+    string roomId = 1;
 }
 
 service Chess {
@@ -70,4 +73,5 @@ service Chess {
     rpc JoinRoom(JoinRoomRequest) returns (RoomResponse) {}
     rpc GetRooms(GetRoomRequest) returns (GetRoomsResponse) {}
     rpc Moves(stream MoveRequest) returns (stream MoveResponse) {}
+    rpc GetRoomInfo(GetRoomRequest) returns (RoomResponse) {}
 }
