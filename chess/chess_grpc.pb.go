@@ -25,8 +25,9 @@ type ChessClient interface {
 	CreateRoom(ctx context.Context, in *CreateRoomRequest, opts ...grpc.CallOption) (*RoomResponse, error)
 	JoinRoom(ctx context.Context, in *JoinRoomRequest, opts ...grpc.CallOption) (*RoomResponse, error)
 	GetRooms(ctx context.Context, in *GetRoomRequest, opts ...grpc.CallOption) (*GetRoomsResponse, error)
-	Moves(ctx context.Context, opts ...grpc.CallOption) (Chess_MovesClient, error)
+	Moves(ctx context.Context, in *MoveRequest, opts ...grpc.CallOption) (*MoveResponse, error)
 	GetRoomInfo(ctx context.Context, in *GetRoomRequest, opts ...grpc.CallOption) (*RoomResponse, error)
+	ListenToRoom(ctx context.Context, in *GetRoomRequest, opts ...grpc.CallOption) (Chess_ListenToRoomClient, error)
 }
 
 type chessClient struct {
@@ -64,35 +65,13 @@ func (c *chessClient) GetRooms(ctx context.Context, in *GetRoomRequest, opts ...
 	return out, nil
 }
 
-func (c *chessClient) Moves(ctx context.Context, opts ...grpc.CallOption) (Chess_MovesClient, error) {
-	stream, err := c.cc.NewStream(ctx, &Chess_ServiceDesc.Streams[0], "/Chess/Moves", opts...)
+func (c *chessClient) Moves(ctx context.Context, in *MoveRequest, opts ...grpc.CallOption) (*MoveResponse, error) {
+	out := new(MoveResponse)
+	err := c.cc.Invoke(ctx, "/Chess/Moves", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
-	x := &chessMovesClient{stream}
-	return x, nil
-}
-
-type Chess_MovesClient interface {
-	Send(*MoveRequest) error
-	Recv() (*MoveResponse, error)
-	grpc.ClientStream
-}
-
-type chessMovesClient struct {
-	grpc.ClientStream
-}
-
-func (x *chessMovesClient) Send(m *MoveRequest) error {
-	return x.ClientStream.SendMsg(m)
-}
-
-func (x *chessMovesClient) Recv() (*MoveResponse, error) {
-	m := new(MoveResponse)
-	if err := x.ClientStream.RecvMsg(m); err != nil {
-		return nil, err
-	}
-	return m, nil
+	return out, nil
 }
 
 func (c *chessClient) GetRoomInfo(ctx context.Context, in *GetRoomRequest, opts ...grpc.CallOption) (*RoomResponse, error) {
@@ -104,6 +83,38 @@ func (c *chessClient) GetRoomInfo(ctx context.Context, in *GetRoomRequest, opts 
 	return out, nil
 }
 
+func (c *chessClient) ListenToRoom(ctx context.Context, in *GetRoomRequest, opts ...grpc.CallOption) (Chess_ListenToRoomClient, error) {
+	stream, err := c.cc.NewStream(ctx, &Chess_ServiceDesc.Streams[0], "/Chess/ListenToRoom", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &chessListenToRoomClient{stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+type Chess_ListenToRoomClient interface {
+	Recv() (*RoomResponse, error)
+	grpc.ClientStream
+}
+
+type chessListenToRoomClient struct {
+	grpc.ClientStream
+}
+
+func (x *chessListenToRoomClient) Recv() (*RoomResponse, error) {
+	m := new(RoomResponse)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
 // ChessServer is the server API for Chess service.
 // All implementations must embed UnimplementedChessServer
 // for forward compatibility
@@ -111,8 +122,9 @@ type ChessServer interface {
 	CreateRoom(context.Context, *CreateRoomRequest) (*RoomResponse, error)
 	JoinRoom(context.Context, *JoinRoomRequest) (*RoomResponse, error)
 	GetRooms(context.Context, *GetRoomRequest) (*GetRoomsResponse, error)
-	Moves(Chess_MovesServer) error
+	Moves(context.Context, *MoveRequest) (*MoveResponse, error)
 	GetRoomInfo(context.Context, *GetRoomRequest) (*RoomResponse, error)
+	ListenToRoom(*GetRoomRequest, Chess_ListenToRoomServer) error
 	mustEmbedUnimplementedChessServer()
 }
 
@@ -129,11 +141,14 @@ func (UnimplementedChessServer) JoinRoom(context.Context, *JoinRoomRequest) (*Ro
 func (UnimplementedChessServer) GetRooms(context.Context, *GetRoomRequest) (*GetRoomsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetRooms not implemented")
 }
-func (UnimplementedChessServer) Moves(Chess_MovesServer) error {
-	return status.Errorf(codes.Unimplemented, "method Moves not implemented")
+func (UnimplementedChessServer) Moves(context.Context, *MoveRequest) (*MoveResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Moves not implemented")
 }
 func (UnimplementedChessServer) GetRoomInfo(context.Context, *GetRoomRequest) (*RoomResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetRoomInfo not implemented")
+}
+func (UnimplementedChessServer) ListenToRoom(*GetRoomRequest, Chess_ListenToRoomServer) error {
+	return status.Errorf(codes.Unimplemented, "method ListenToRoom not implemented")
 }
 func (UnimplementedChessServer) mustEmbedUnimplementedChessServer() {}
 
@@ -202,30 +217,22 @@ func _Chess_GetRooms_Handler(srv interface{}, ctx context.Context, dec func(inte
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Chess_Moves_Handler(srv interface{}, stream grpc.ServerStream) error {
-	return srv.(ChessServer).Moves(&chessMovesServer{stream})
-}
-
-type Chess_MovesServer interface {
-	Send(*MoveResponse) error
-	Recv() (*MoveRequest, error)
-	grpc.ServerStream
-}
-
-type chessMovesServer struct {
-	grpc.ServerStream
-}
-
-func (x *chessMovesServer) Send(m *MoveResponse) error {
-	return x.ServerStream.SendMsg(m)
-}
-
-func (x *chessMovesServer) Recv() (*MoveRequest, error) {
-	m := new(MoveRequest)
-	if err := x.ServerStream.RecvMsg(m); err != nil {
+func _Chess_Moves_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MoveRequest)
+	if err := dec(in); err != nil {
 		return nil, err
 	}
-	return m, nil
+	if interceptor == nil {
+		return srv.(ChessServer).Moves(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/Chess/Moves",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ChessServer).Moves(ctx, req.(*MoveRequest))
+	}
+	return interceptor(ctx, in, info, handler)
 }
 
 func _Chess_GetRoomInfo_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -244,6 +251,27 @@ func _Chess_GetRoomInfo_Handler(srv interface{}, ctx context.Context, dec func(i
 		return srv.(ChessServer).GetRoomInfo(ctx, req.(*GetRoomRequest))
 	}
 	return interceptor(ctx, in, info, handler)
+}
+
+func _Chess_ListenToRoom_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(GetRoomRequest)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(ChessServer).ListenToRoom(m, &chessListenToRoomServer{stream})
+}
+
+type Chess_ListenToRoomServer interface {
+	Send(*RoomResponse) error
+	grpc.ServerStream
+}
+
+type chessListenToRoomServer struct {
+	grpc.ServerStream
+}
+
+func (x *chessListenToRoomServer) Send(m *RoomResponse) error {
+	return x.ServerStream.SendMsg(m)
 }
 
 // Chess_ServiceDesc is the grpc.ServiceDesc for Chess service.
@@ -266,16 +294,19 @@ var Chess_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _Chess_GetRooms_Handler,
 		},
 		{
+			MethodName: "Moves",
+			Handler:    _Chess_Moves_Handler,
+		},
+		{
 			MethodName: "GetRoomInfo",
 			Handler:    _Chess_GetRoomInfo_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{
 		{
-			StreamName:    "Moves",
-			Handler:       _Chess_Moves_Handler,
+			StreamName:    "ListenToRoom",
+			Handler:       _Chess_ListenToRoom_Handler,
 			ServerStreams: true,
-			ClientStreams: true,
 		},
 	},
 	Metadata: "chess/chess.proto",

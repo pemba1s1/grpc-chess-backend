@@ -68,10 +68,16 @@ message GetRoomRequest {
     string roomId = 1;
 }
 
+message RoomResponseStream {
+    RoomResponse room = 1;
+    MoveResponse move = 2;
+}
+
 service Chess {
     rpc CreateRoom(CreateRoomRequest) returns (RoomResponse) {}
     rpc JoinRoom(JoinRoomRequest) returns (RoomResponse) {}
     rpc GetRooms(GetRoomRequest) returns (GetRoomsResponse) {}
-    rpc Moves(stream MoveRequest) returns (stream MoveResponse) {}
+    rpc Moves(MoveRequest) returns (MoveResponse) {}
     rpc GetRoomInfo(GetRoomRequest) returns (RoomResponse) {}
+    rpc ListenToRoom(GetRoomRequest) returns (stream RoomResponse) {}
 }

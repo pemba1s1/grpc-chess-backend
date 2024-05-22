@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"io"
 	"log"
 	"net"
 
@@ -17,8 +16,8 @@ type Room struct {
 	RoomId          string
 	Player_1        chess.Player
 	Player_2        chess.Player
-	Player_1_Stream *chess.Chess_MovesServer
-	Player_2_Stream *chess.Chess_MovesServer
+	Player_1_Stream *chess.Chess_ListenToRoomServer
+	Player_2_Stream *chess.Chess_ListenToRoomServer
 }
 
 type myChessServer struct {
@@ -37,7 +36,7 @@ func (s *myChessServer) CreateRoom(ctx context.Context, r *chess.CreateRoomReque
 	}
 
 	s.rooms[room.RoomId] = room
-	fmt.Printf("Creating Room, %v", s.rooms[room.RoomId])
+	fmt.Println("Creating Room,")
 	return &chess.RoomResponse{RoomId: room.RoomId, Status: "Room Created"}, nil
 }
 
@@ -73,43 +72,59 @@ func (s *myChessServer) GetRoomInfo(ctx context.Context, r *chess.GetRoomRequest
 	return &chess.RoomResponse{RoomId: room.RoomId, Player_1: &room.Player_1, Player_2: &room.Player_2, Status: "Room Found"}, nil
 }
 
-func (s *myChessServer) BroadcastMove(room *Room, in *chess.MoveRequest) {
-	if in.Player.Color == chess.Color_WHITE && room.Player_2_Stream != nil {
-		broadcast(room.Player_2_Stream, &chess.MoveResponse{Move: in.Move, Player: in.Player})
-	} else if in.Player.Color == chess.Color_BLACK && room.Player_1_Stream != nil {
-		broadcast(room.Player_1_Stream, &chess.MoveResponse{Move: in.Move, Player: in.Player})
-	}
+// func (s *myChessServer) BroadcastMove(room *Room, in *chess.MoveRequest) {
+// 	if in.Player.Color == chess.Color_WHITE && room.Player_2_Stream != nil {
+// 		broadcast(room.Player_2_Stream, &chess.MoveResponse{Move: in.Move, Player: in.Player})
+// 	} else if in.Player.Color == chess.Color_BLACK && room.Player_1_Stream != nil {
+// 		broadcast(room.Player_1_Stream, &chess.MoveResponse{Move: in.Move, Player: in.Player})
+// 	}
+// }
+
+// func broadcast(stream *chess.Chess_MovesServer, moveResponse *chess.MoveResponse) {
+// 	err := (*stream).Send(moveResponse)
+// 	if err != nil {
+// 		fmt.Printf("Cannot broadcast message, %v", err)
+// 	}
+// }
+
+func (s *myChessServer) Moves(context.Context, *chess.MoveRequest) (*chess.MoveResponse, error) {
+	// for {
+	// 	in, err := stream.Recv()
+	// 	if err == io.EOF {
+	// 		return nil
+	// 	}
+	// 	if err != nil {
+	// 		return err
+	// 	}
+	// 	room, ok := s.rooms[in.RoomId]
+	// 	if !ok {
+	// 		return fmt.Errorf("Room Not Found")
+	// 	}
+	// 	if in.Player.Color == chess.Color_WHITE && room.Player_1_Stream == nil {
+	// 		room.Player_1_Stream = &stream
+	// 	}
+	// 	if in.Player.Color == chess.Color_BLACK && room.Player_2_Stream == nil {
+	// 		room.Player_2_Stream = &stream
+	// 	}
+	// 	s.BroadcastMove(room, in)
+	// 	stream.Send(&chess.MoveResponse{Move: in.Move, Player: in.Player})
+	// }
+	return &chess.MoveResponse{}, nil
 }
 
-func broadcast(stream *chess.Chess_MovesServer, moveResponse *chess.MoveResponse) {
-	err := (*stream).Send(moveResponse)
-	if err != nil {
-		fmt.Printf("Cannot broadcast message, %v", err)
-	}
-}
-
-func (s *myChessServer) Moves(stream chess.Chess_MovesServer) error {
-	for {
-		in, err := stream.Recv()
-		if err == io.EOF {
-			return nil
-		}
-		if err != nil {
+func (s *myChessServer) ListenToRoom(r *chess.GetRoomRequest, stream chess.Chess_ListenToRoomServer) error {
+	fmt.Println("Listening to Room")
+	a := []string{"one", "two", "three", "four", "five"}
+	for _, element := range a {
+		// Do something with each element
+		fmt.Println(element)
+		c := &chess.RoomResponse{}
+		c.RoomId = element
+		if err := stream.Send(c); err != nil {
 			return err
 		}
-		room, ok := s.rooms[in.RoomId]
-		if !ok {
-			return fmt.Errorf("Room Not Found")
-		}
-		if in.Player.Color == chess.Color_WHITE && room.Player_1_Stream == nil {
-			room.Player_1_Stream = &stream
-		}
-		if in.Player.Color == chess.Color_BLACK && room.Player_2_Stream == nil {
-			room.Player_2_Stream = &stream
-		}
-		s.BroadcastMove(room, in)
-		stream.Send(&chess.MoveResponse{Move: in.Move, Player: in.Player})
 	}
+	return nil
 }
 
 func main() {
