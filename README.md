@@ -29,6 +29,16 @@ As browser can only communicate using HTTP/1 but gRPC uses HTTP/2. So we need to
 ```bash
 docker-compose up
 ```
+The `port_value` in line 5 of `envoy.yaml` points to the endpoint for listening to browser request.
+```bash
+socket_address: { address: 0.0.0.0, port_value: 8080 }
+```
+The `port_value` in line 60 of `envoy.yaml` points to the gRPC server.
+```bash
+socket_address:
+    address: host.docker.internal
+    port_value: 8082
+```
 
 ### Build and run docker
 ```bash
