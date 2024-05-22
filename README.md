@@ -24,6 +24,11 @@ git clone https://github.com/pemba1s1/chess-backend.git
 ```bash
 make generate_grpc_code
 ```
+### Start Envoy
+As browser can only communicate using HTTP/1 but gRPC uses HTTP/2. So we need to use envoy to catch HTTP/1 request from browser and point to corresponding gRPC service.
+```bash
+docker-compose up
+```
 
 ### Build and run docker
 ```bash
