@@ -55,13 +55,11 @@ message MoveRequest {
     string roomId = 1;
     Player player = 2;
     Move move = 3;
-    PieceType killedPiece = 4;
 }
 
 message MoveResponse {
     Move move = 1;
     Player player = 2;
-    PieceType killedPiece = 3;
 }
 
 message GetRoomRequest {
@@ -72,7 +70,6 @@ message RoomResponseStream {
     string roomId = 1;
     Player player = 2;
     Move move = 3;
-    PieceType killedPiece = 4;
 }
 
 service Chess {

@@ -29,11 +29,10 @@ type myChessServer struct {
 }
 
 type chessChannel struct {
-	RoomId      string
-	From        *chess.Coordinate
-	To          *chess.Coordinate
-	Player      *chess.Player
-	KilledPiece *chess.PieceType
+	RoomId string
+	From   *chess.Coordinate
+	To     *chess.Coordinate
+	Player *chess.Player
 }
 
 func (s *myChessServer) CreateRoom(ctx context.Context, r *chess.CreateRoomRequest) (*chess.RoomResponse, error) {
@@ -47,7 +46,7 @@ func (s *myChessServer) CreateRoom(ctx context.Context, r *chess.CreateRoomReque
 	}
 
 	s.rooms[room.RoomId] = room
-	fmt.Println("Creating Room,")
+	log.Printf("Creating Room, %v \n", room.RoomId)
 	return &chess.RoomResponse{RoomId: room.RoomId, Status: "Room Created"}, nil
 }
 
@@ -63,9 +62,8 @@ func (s *myChessServer) JoinRoom(ctx context.Context, r *chess.JoinRoomRequest) 
 	room.Player_2 = player_2
 	room.Player_2_Stream = nil
 	chessChannel := &chessChannel{RoomId: room.RoomId, Player: player_2}
-	fmt.Printf("Joining Room, %v", room)
+	log.Printf("%v is joining Room, %v \n", player_2.Name, room.RoomId)
 	if room.Player_1_Stream != nil {
-		fmt.Println("Sending Room Response to Player 1")
 		s.mu.Lock()
 		s.ch <- *chessChannel
 		s.mu.Unlock()
@@ -92,9 +90,10 @@ func (s *myChessServer) GetRoomInfo(ctx context.Context, r *chess.GetRoomRequest
 }
 
 func (s *myChessServer) Moves(ctx context.Context, r *chess.MoveRequest) (*chess.MoveResponse, error) {
-	moveResponse := &chess.MoveResponse{Move: r.Move, Player: r.Player, KilledPiece: r.KilledPiece}
-	chessChannel := &chessChannel{RoomId: r.RoomId, From: r.Move.From, To: r.Move.To, Player: r.Player, KilledPiece: &r.KilledPiece}
-	println("Move Received")
+	moveResponse := &chess.MoveResponse{Move: r.Move, Player: r.Player}
+	chessChannel := &chessChannel{RoomId: r.RoomId, From: r.Move.From, To: r.Move.To, Player: r.Player}
+	log.Printf("Move Received from %v \n", r.Player.Name)
+	log.Printf("Move From (%v, %v) to (%v, %v) \n", r.Move.From.X, r.Move.From.Y, r.Move.To.X, r.Move.To.Y)
 	s.mu.Lock()
 	s.ch <- *chessChannel
 	s.mu.Unlock()
@@ -106,7 +105,7 @@ func (s *myChessServer) ListenToRoom(r *chess.MoveRequest, stream chess.Chess_Li
 	if !ok {
 		return fmt.Errorf("Room Not Found")
 	}
-	println("Listening to Room")
+	log.Printf("%v Listening to Room %v \n", r.Player.Name, r.RoomId)
 	if r.Player.Color == chess.Color_WHITE {
 		room.Player_1_Stream = &stream
 	}
@@ -115,7 +114,6 @@ func (s *myChessServer) ListenToRoom(r *chess.MoveRequest, stream chess.Chess_Li
 	}
 
 	for chessChannel := range s.ch {
-		// Process the move
 		s.mu.Lock()
 		roomFromCh, ok := s.rooms[chessChannel.RoomId]
 		if !ok {
@@ -130,23 +128,21 @@ func (s *myChessServer) ListenToRoom(r *chess.MoveRequest, stream chess.Chess_Li
 		}
 		if chessChannel.From != nil && chessChannel.To != nil {
 			roomResponseStream.Move = &chess.Move{From: chessChannel.From, To: chessChannel.To}
-			roomResponseStream.KilledPiece = *chessChannel.KilledPiece
 		}
+		log.Printf("Sending message from %v \n", chessChannel.Player.Name)
 		if chessChannel.Player.Color == chess.Color_WHITE {
 			if err := (*roomFromCh.Player_2_Stream).Send(roomResponseStream); err != nil {
-				fmt.Printf("Cannot send message, %v", err)
+				log.Printf("Cannot send message to %v, %v", roomFromCh.Player_2.Name, err)
 			}
 		}
 		if chessChannel.Player.Color == chess.Color_BLACK {
 			if err := (*roomFromCh.Player_1_Stream).Send(roomResponseStream); err != nil {
-				fmt.Printf("Cannot send message, %v", err)
+				log.Printf("Cannot send message to %v, %v", roomFromCh.Player_1.Name, err)
 			}
 		}
-		fmt.Println(roomFromCh)
-
 		s.mu.Unlock()
 	}
-	println("End of Listening to Room")
+	log.Printf("%v stopped listening to room %v", r.Player.Name, r.RoomId)
 	return nil
 }
 
@@ -162,7 +158,7 @@ func main() {
 	service.rooms = make(map[string]*Room)
 	service.ch = make(chan chessChannel)
 	chess.RegisterChessServer(serverRegistrar, service)
-	fmt.Printf("Server Starting On Port 8080")
+	log.Printf("Server Starting On Port 8080")
 	err = serverRegistrar.Serve(lis)
 
 	if err != nil {
