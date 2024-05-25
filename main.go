@@ -106,6 +106,7 @@ func (s *myChessServer) ListenToRoom(r *chess.MoveRequest, stream chess.Chess_Li
 		return fmt.Errorf("Room Not Found")
 	}
 	log.Printf("%v Listening to Room %v \n", r.Player.Name, r.RoomId)
+	// send board, current player
 	if r.Player.Color == chess.Color_WHITE {
 		room.Player_1_Stream = &stream
 	}

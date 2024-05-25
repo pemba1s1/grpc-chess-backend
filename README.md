@@ -27,7 +27,7 @@ make generate_grpc_code
 ### Start Envoy
 As browser can only communicate using HTTP/1 but gRPC uses HTTP/2. So we need to use envoy to catch HTTP/1 request from browser and point to corresponding gRPC service.
 ```bash
-docker-compose up
+docker-compose up envoy
 ```
 The `port_value` in line 5 of `envoy.yaml` points to the endpoint for listening to browser request.
 ```bash
@@ -39,9 +39,16 @@ socket_address:
     address: host.docker.internal
     port_value: 8082
 ```
-
-### Build and run docker
+### Run Go gRPC server
+Using Docker
 ```bash
-make build_docker
-make run_docker
+docker-compose up app
+```
+Without building
+```bash
+go run .
+```
+### Start both envoy and server
+```bash
+docker-compose up
 ```
