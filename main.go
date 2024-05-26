@@ -159,7 +159,7 @@ func main() {
 	service.rooms = make(map[string]*Room)
 	service.ch = make(chan chessChannel)
 	chess.RegisterChessServer(serverRegistrar, service)
-	log.Printf("Server Starting On Port 8080")
+	log.Printf("Server Starting On Port 8082")
 	err = serverRegistrar.Serve(lis)
 
 	if err != nil {
