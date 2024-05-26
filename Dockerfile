@@ -1,5 +1,5 @@
 # Start from the latest golang base image
-FROM golang:1.22
+FROM golang:1.22.3
 
 # Add Maintainer Info
 LABEL maintainer="Pemba Sherpa"
